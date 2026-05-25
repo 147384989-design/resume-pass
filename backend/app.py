@@ -7,9 +7,14 @@ from flask_cors import CORS
 app = Flask(__name__, static_folder=None)
 CORS(app)
 
-# 系统根目录
+# 兼容不同工作目录启动
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FRONTEND_DIR = os.path.join(BASE_DIR, "..", "frontend")
+if os.path.isdir(os.path.join(BASE_DIR, "..", "frontend")):
+    FRONTEND_DIR = os.path.join(BASE_DIR, "..", "frontend")
+elif os.path.isdir(os.path.join(BASE_DIR, "frontend")):
+    FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+else:
+    FRONTEND_DIR = os.path.join(BASE_DIR)
 
 
 @app.route("/")
