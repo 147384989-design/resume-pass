@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智能简历生产工具</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Microsoft YaHei','PingFang SC',sans-serif;background:#f0f2f5;color:#333;min-height:100vh}
+button{cursor:pointer;font-family:inherit}
+input,textarea{font-family:inherit}
+.top-bar{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:14px 32px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(102,126,234,0.3)}
+.top-bar h1{font-size:20px;font-weight:600;letter-spacing:1px}
+.top-bar .count-badge{background:rgba(255,255,255,0.2);padding:6px 16px;border-radius:20px;font-size:14px;backdrop-filter:blur(4px)}
+.top-bar .count-badge .num{font-weight:700;font-size:16px}
+.main-wrap{display:flex;gap:24px;padding:24px 32px;max-width:1600px;margin:0 auto;align-items:flex-start}
+.left-panel{flex:1;min-width:0;max-width:560px}
+.right-panel{flex:1;min-width:0;position:sticky;top:80px}
+.form-card{background:#fff;border-radius:12px;padding:24px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.form-card h3{font-size:16px;font-weight:600;color:#333;padding-left:12px;border-left:3px solid #667eea;margin-bottom:16px}
+.form-row{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.form-row>*{flex:1;min-width:140px}
+.form-group{margin-bottom:12px}
+.form-group label{display:block;font-size:13px;color:#666;margin-bottom:4px;font-weight:500}
+.form-group input,.form-group textarea{width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;transition:border-color .2s;background:#fafafa}
+.form-group input:focus,.form-group textarea:focus{border-color:#667eea;outline:none;background:#fff}
+.form-group textarea{resize:vertical;min-height:60px}
+.entry-list{margin-bottom:8px}
+.entry-item{background:#f8f9fc;border-radius:8px;padding:16px;margin-bottom:12px;border:1px solid #eef0f5;position:relative}
+.entry-item .entry-del{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;border:none;background:#fee2e2;color:#ef4444;font-size:14px;line-height:24px;text-align:center;padding:0}
+.entry-item .entry-del:hover{background:#fecaca}
+.btn-add{padding:8px 20px;border:1px dashed #667eea;border-radius:6px;background:transparent;color:#667eea;font-size:13px;width:100%;transition:all .2s}
+.btn-add:hover{background:#f0f2ff}
+.polish-wrap{display:flex;gap:8px;align-items:flex-start}
+.polish-wrap textarea{flex:1}
+.btn-polish{padding:6px 14px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:6px;font-size:13px;white-space:nowrap;transition:opacity .2s}
+.btn-polish:hover{opacity:.9}
+.btn-polish:disabled{opacity:.4;cursor:not-allowed}
+.template-switcher{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.btn-tpl{padding:8px 18px;border:2px solid #ddd;border-radius:8px;background:#fff;font-size:13px;transition:all .2s;font-weight:500}
+.btn-tpl:hover{border-color:#667eea}
+.btn-tpl.active{border-color:#667eea;background:#f0f2ff;color:#667eea}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;justify-content:center;align-items:center}
+.modal-overlay.show{display:flex}
+.modal-box{background:#fff;border-radius:16px;padding:28px;width:640px;max-width:90vw;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.15)}
+.modal-box h3{font-size:18px;margin-bottom:16px;color:#333}
+.modal-compare{display:flex;flex-direction:column;gap:16px}
+.modal-compare .original,.modal-compare .polished{background:#f8f9fc;border-radius:8px;padding:14px;font-size:14px;line-height:1.7}
+.modal-compare .original{border-left:3px solid #f59e0b}
+.modal-compare .polished{border-left:3px solid #667eea}
+.modal-compare .label{font-size:12px;color:#999;margin-bottom:6px;font-weight:600}
+.modal-actions{display:flex;gap:12px;justify-content:flex-end;margin-top:20px}
+.modal-actions button{padding:8px 24px;border-radius:8px;font-size:14px;border:none}
+.modal-actions .btn-cancel{background:#f0f0f0;color:#666}
+.modal-actions .btn-apply{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+.modal-actions .btn-cancel:hover{background:#e5e5e5}
+.modal-actions .btn-apply:hover{opacity:.9}
+.btn-pdf{padding:10px 24px;background:#ef4444;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;transition:background .2s;display:inline-flex;align-items:center;gap:6px}
+.btn-pdf:hover{background:#dc2626}
+.action-bar{display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+#resume-preview{background:#fff;box-shadow:0 4px 20px rgba(0,0,0,0.08);border-radius:4px;overflow:hidden;transition:all .3s}
+.tpl-simple{padding:40px 44px;color:#333;font-size:13px;line-height:1.6}
+.tpl-simple .resume-header{text-align:center;margin-bottom:24px;padding-bottom:20px;border-bottom:2px solid #333}
+.tpl-simple .resume-header h2{font-size:26px;font-weight:700;letter-spacing:4px;margin-bottom:8px}
+.tpl-simple .resume-header .contact-line{font-size:13px;color:#555;display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+.tpl-simple .resume-header .intent{font-size:14px;color:#667eea;margin-top:6px;font-weight:500}
+.tpl-simple .section{margin-bottom:18px}
+.tpl-simple .section-title{font-size:15px;font-weight:700;margin-bottom:10px;padding-bottom:4px;border-bottom:1px solid #ddd;color:#222}
+.tpl-simple .section-title .en{font-weight:400;color:#999;font-size:12px;margin-left:6px}
+.tpl-simple .item{margin-bottom:12px}
+.tpl-simple .item-header{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;margin-bottom:2px}
+.tpl-simple .item-header .name{font-weight:700;font-size:14px}
+.tpl-simple .item-header .meta{color:#888;font-size:12px}
+.tpl-simple .item-body{margin-top:4px;white-space:pre-wrap;color:#444;font-size:13px}
+.tpl-simple .skill-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.tpl-simple .skill-tags span{background:#f0f0f0;padding:2px 10px;border-radius:3px;font-size:12px;color:#555}
+.tpl-simple .summary-text,.tpl-simple .evaluate-text{white-space:pre-wrap;color:#444;font-size:13px;line-height:1.7}
+.tpl-professional{display:flex;font-size:13px;line-height:1.6}
+.tpl-professional .sidebar{width:220px;background:linear-gradient(180deg,#2c3e50,#34495e);color:#fff;padding:32px 20px;flex-shrink:0}
+.tpl-professional .sidebar h2{font-size:22px;font-weight:700;margin-bottom:4px;letter-spacing:2px}
+.tpl-professional .sidebar .intent{color:#90cdfe;font-size:13px;margin-bottom:16px}
+.tpl-professional .sidebar .contact-block{margin-bottom:20px}
+.tpl-professional .sidebar .contact-block .label{font-size:11px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.tpl-professional .sidebar .contact-block .val{font-size:13px;color:rgba(255,255,255,0.9);margin-bottom:6px}
+.tpl-professional .sidebar .skill-block .tag{display:inline-block;background:rgba(255,255,255,0.15);padding:2px 10px;border-radius:12px;font-size:12px;margin:2px 3px}
+.tpl-professional .main-content{flex:1;padding:32px 36px}
+.tpl-professional .main-content .section{margin-bottom:20px}
+.tpl-professional .main-content .section-title{font-size:15px;font-weight:700;color:#2c3e50;padding-bottom:6px;border-bottom:2px solid #2c3e50;margin-bottom:12px}
+.tpl-professional .main-content .item{margin-bottom:14px}
+.tpl-professional .main-content .item-header{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap}
+.tpl-professional .main-content .item-header .name{font-weight:700;font-size:14px;color:#2c3e50}
+.tpl-professional .main-content .item-header .meta{color:#888;font-size:12px}
+.tpl-professional .main-content .item-body{margin-top:4px;color:#555;font-size:13px;white-space:pre-wrap}
+.tpl-professional .main-content .summary-text,.tpl-professional .main-content .evaluate-text{white-space:pre-wrap;color:#555;font-size:13px;line-height:1.7}
+.tpl-creative{padding:0;font-size:13px;line-height:1.6}
+.tpl-creative .creative-header{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:36px 44px 28px;position:relative;overflow:hidden}
+.tpl-creative .creative-header::after{content:'';position:absolute;right:-40px;top:-40px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,0.05)}
+.tpl-creative .creative-header h2{font-size:28px;font-weight:700;letter-spacing:3px;margin-bottom:6px}
+.tpl-creative .creative-header .contact-line{display:flex;gap:20px;font-size:13px;opacity:.9;flex-wrap:wrap}
+.tpl-creative .creative-header .intent{display:inline-block;background:rgba(255,255,255,0.2);padding:4px 14px;border-radius:20px;font-size:14px;margin-top:8px;backdrop-filter:blur(4px)}
+.tpl-creative .creative-body{padding:28px 44px 36px}
+.tpl-creative .section{margin-bottom:22px}
+.tpl-creative .section-title{font-size:16px;font-weight:700;color:#667eea;display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.tpl-creative .section-title .icon{font-size:18px}
+.tpl-creative .section-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,#667eea,transparent)}
+.tpl-creative .item{margin-bottom:14px;border-left:2px solid #f0f2ff;padding-left:12px}
+.tpl-creative .item-header{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap}
+.tpl-creative .item-header .name{font-weight:700;font-size:14px;color:#333}
+.tpl-creative .item-header .name i{color:#667eea;margin-right:4px}
+.tpl-creative .item-header .meta{color:#999;font-size:12px}
+.tpl-creative .item-body{margin-top:4px;color:#555;font-size:13px;white-space:pre-wrap}
+.tpl-creative .skill-tags{display:flex;flex-wrap:wrap;gap:8px}
+.tpl-creative .skill-tags span{background:linear-gradient(135deg,#f0f2ff,#fff);color:#667eea;padding:4px 14px;border-radius:16px;font-size:12px;border:1px solid #e0e4ff;font-weight:500}
+.tpl-creative .summary-text,.tpl-creative .evaluate-text{white-space:pre-wrap;color:#555;font-size:13px;line-height:1.8;padding:12px 16px;background:#f8f9ff;border-radius:8px}
+@media(max-width:1024px){
+.main-wrap{flex-direction:column;padding:16px}
+.left-panel,.right-panel{max-width:100%}
+.right-panel{position:static}
+.tpl-professional{flex-direction:column}
+.tpl-professional .sidebar{width:100%}
+}
+.photo-upload{display:flex;align-items:center;gap:16px;margin-bottom:12px}
+.photo-upload .photo-preview{width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid #e0e4ff;background:#f8f9fc;flex-shrink:0;overflow:hidden}
+.photo-upload .photo-preview img{width:100%;height:100%;object-fit:cover}
+.photo-upload .photo-preview .placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:28px;background:#f8f9fc}
+.photo-upload .photo-actions{display:flex;flex-direction:column;gap:6px}
+.photo-upload .photo-actions .btn-upload{display:inline-block;padding:6px 14px;background:#f0f2ff;color:#667eea;border:1px solid #e0e4ff;border-radius:6px;font-size:13px;cursor:pointer;transition:all .2s}
+.photo-upload .photo-actions .btn-upload:hover{background:#e0e4ff}
+.photo-upload .photo-actions .btn-clear{padding:4px 10px;background:transparent;border:none;color:#999;font-size:12px;cursor:pointer}
+.photo-upload .photo-actions .btn-clear:hover{color:#ef4444}
+.tpl-simple .photo-header{display:flex;align-items:center;gap:20px;justify-content:center;margin-bottom:16px}
+.tpl-simple .photo-header .headshot{width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid #eee}
+.tpl-professional .sidebar .headshot{width:120px;height:120px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.2);margin:0 auto 16px;display:block}
+.tpl-creative .creative-header .photo-name{display:flex;align-items:center;gap:20px}
+.tpl-creative .creative-header .headshot{width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.3)}
+.btn-settings{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:4px 8px;opacity:0.7;transition:opacity .2s;line-height:1}
+.btn-settings:hover{opacity:1}
+.settings-modal .modal-box{max-width:480px}
+.settings-modal .form-group{margin-bottom:14px}
+.settings-modal .form-group label{font-size:13px;color:#666;margin-bottom:4px;display:block;font-weight:500}
+.settings-modal .form-group select,.settings-modal .form-group input{width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;background:#fafafa}
+.settings-modal .form-group select:focus,.settings-modal .form-group input:focus{border-color:#667eea;outline:none;background:#fff}
+.settings-modal .hint{font-size:12px;color:#999;margin-top:4px}
+.settings-modal .status-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#f8f9fc;border-radius:8px;margin-bottom:14px}
+.settings-modal .status-row .label{font-size:13px;color:#666}
+.settings-modal .status-row .val{font-size:13px;font-weight:500}
+.settings-modal .status-row .val.active{color:#22c55e}
+.settings-modal .status-row .val.inactive{color:#ef4444}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;z-index:2000;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+</style></head><body><div class="top-bar">
+  <h1>&#x1F916; 智能简历生产工具</h1>
+  <div class="count-badge">AI润色剩余 <span class="num" id="polish-count">20</span> / 20 次</div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="main-wrap">
+  <div class="left-panel">
+    <div class="form-card">
+      <h3>选择模板</h3>
+      <div class="template-switcher">
+        <button class="btn-tpl active" data-tpl="simple">&#x1F4D1; 简约版</button>
+        <button class="btn-tpl" data-tpl="professional">&#x1F4BC; 专业版</button>
+        <button class="btn-tpl" data-tpl="creative">&#x2728; 创意版</button>
+      </div>
+    </div>
+    <div class="form-card">
+      <h3>基本信息</h3>
+      <div class="photo-upload">
+        <div class="photo-preview">
+          <div id="photo-placeholder" class="placeholder">📷</div>
+          <img id="photo-img" style="display:none">
+        </div>
+        <div class="photo-actions">
+          <label class="btn-upload">上传相片<input type="file" id="f-photo" accept="image/*" style="display:none"></label>
+          <button class="btn-clear" onclick="clearPhoto()">清除</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>姓名</label><input id="f-name" placeholder="请输入姓名"></div>
+        <div class="form-group"><label>性别</label><input id="f-gender" placeholder="男/女"></div>
+        <div class="form-group"><label>民族</label><input id="f-ethnicity" placeholder="如：汉族"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>祖籍</label><input id="f-hometown" placeholder="如：广东广州"></div>
+        <div class="form-group"><label>手机</label><input id="f-phone" placeholder="请输入手机号"></div>
+        <div class="form-group"><label>邮箱</label><input id="f-email" placeholder="请输入邮箱"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>求职意向</label><input id="f-intent" placeholder="如：高级前端工程师"></div>
+      </div>
+      <div class="form-group"><label>个人简介</label><div class="polish-wrap"><textarea id="f-summary" rows="3" placeholder="简要介绍自己，突出核心优势..."></textarea><button class="btn-polish" onclick="openPolishModal('_self',0,'summary')">润色 ✨</button></div></div>
+    </div>
+    <div class="form-card">
+      <h3>&#x1F393; 教育背景</h3>
+      <div id="edu-list" class="entry-list"></div>
+      <button class="btn-add" onclick="addEntry('edu')">+ 添加教育经历</button>
+    </div>
+    <div class="form-card">
+      <h3>&#x1F4BB; 实习经历</h3>
+      <div id="work-list" class="entry-list"></div>
+      <button class="btn-add" onclick="addEntry('work')">+ 添加实习经历</button>
+    </div>
+    <div class="form-card">
+      <h3>&#x1F680; 项目经验</h3>
+      <div id="proj-list" class="entry-list"></div>
+      <button class="btn-add" onclick="addEntry('proj')">+ 添加项目经验</button>
+    </div>
+    <div class="form-card">
+      <h3>&#x1F528; 技能证书</h3>
+      <div class="form-group"><label>技能（逗号分隔）</label><input id="f-skills" placeholder="如：JavaScript, Python, React"></div>
+      <div class="form-group"><label>证书（逗号分隔）</label><input id="f-certs" placeholder="如：CET-6, 软考中级"></div>
+    </div>
+    <div class="form-card">
+      <h3>&#x1F4DD; 自我评价</h3>
+      <div class="form-group"><label>自我评价</label><div class="polish-wrap"><textarea id="f-evaluate" rows="4" placeholder="写一段自我评价..."></textarea><button class="btn-polish" onclick="openPolishModal('_self',0,'evaluate')">润色 ✨</button></div></div>
+    </div>
+  </div>
+  <div class="right-panel">
+    <div class="action-bar">
+      <button class="btn-pdf" onclick="exportPDF()">&#x1F4C4; 导出 PDF</button>
+    </div>
+    <div id="resume-preview"></div>
+  </div>
+</div>
+<div class="modal-overlay" id="polish-modal">
+  <div class="modal-box">
+    <h3>&#x2728; AI 润色</h3>
+    <div class="modal-compare">
+      <div class="original"><div class="label">原文</div><div id="modal-original"></div></div>
+      <div class="polished"><div class="label">润色后</div><div id="modal-polished"><em>正在生成润色建议...</em></div></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closePolishModal()">取消</button>
+      <button class="btn-apply" id="btn-apply-polish" onclick="applyPolish()">应用</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay settings-modal" id="settings-modal">
+  <div class="modal-box">
+    <h3>API 设置</h3>
+    <div class="status-row">
+      <span class="label">当前状态</span>
+      <span class="val" id="settings-status">--</span>
+    </div>
+    <div class="form-group">
+      <label>API 提供商</label>
+      <select id="settings-provider" onchange="toggleCustomUrl()">
+        <option value="deepseek">DeepSeek</option>
+        <option value="openai">OpenAI</option>
+        <option value="custom">自定义（兼容 OpenAI）</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>API Key</label>
+      <input id="settings-key" type="password" placeholder="sk-...">
+      <div class="hint">不填则使用服务端默认 Key（如有）</div>
+    </div>
+    <div class="form-group" id="settings-url-group" style="display:none">
+      <label>自定义 API 地址</label>
+      <input id="settings-url" placeholder="https://your-api.com/v1/chat/completions">
+      <div class="hint">须兼容 OpenAI 接口格式</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="document.getElementById('settings-modal').classList.remove('show')">关闭</button>
+      <button class="btn-apply" onclick="saveSettings()">保存</button>
+    </div>
+  </div>
+</div>
+<script>
+var resumeData={name:'',gender:'',ethnicity:'',hometown:'',phone:'',email:'',intent:'',summary:'',photo:'',edu:[],work:[],proj:[],skills:'',certs:'',evaluate:''};
+var currentTemplate='simple',polishContext=null,STORAGE_KEY='resume_polish_count',API_BASE_URL=window.location.protocol==='file:'?'https://resume-polish.onrender.com':'';
+function getPolishCount(){return parseInt(localStorage.getItem(STORAGE_KEY)||'0',10)}
+function incPolishCount(){var c=getPolishCount()+1;localStorage.setItem(STORAGE_KEY,String(c));updateCountDisplay();return c}
+function updateCountDisplay(){var r=Math.max(0,20-getPolishCount());document.getElementById('polish-count').textContent=r}
+updateCountDisplay();
+function loadUserApiConfig(){
+  var cfg={key:localStorage.getItem('resume_user_key')||'',provider:localStorage.getItem('resume_user_provider')||'deepseek',url:localStorage.getItem('resume_user_url')||''};
+  if(!cfg.key)cfg.provider='';return cfg}
+function saveUserApiConfig(cfg){
+  if(cfg.key)localStorage.setItem('resume_user_key',cfg.key);else localStorage.removeItem('resume_user_key');
+  if(cfg.provider)localStorage.setItem('resume_user_provider',cfg.provider);else localStorage.removeItem('resume_user_provider');
+  if(cfg.url)localStorage.setItem('resume_user_url',cfg.url);else localStorage.removeItem('resume_user_url')}
+function openSettings(){
+  var cfg=loadUserApiConfig();
+  document.getElementById('settings-provider').value=cfg.provider||'deepseek';
+  document.getElementById('settings-key').value=cfg.key||'';
+  document.getElementById('settings-url').value=cfg.url||'';
+  toggleCustomUrl();updateSettingsStatus();document.getElementById('settings-modal').classList.add('show')}
+function toggleCustomUrl(){document.getElementById('settings-url-group').style.display=document.getElementById('settings-provider').value==='custom'?'block':'none'}
+function updateSettingsStatus(){
+  var cfg=loadUserApiConfig(),el=document.getElementById('settings-status');
+  if(cfg.key){el.textContent='已使用自备 Key ('+cfg.provider+')';el.className='val active'}
+  else if(API_BASE_URL){el.textContent='使用服务端默认';el.className='val active'}
+  else{el.textContent='未配置（将使用模拟润色）';el.className='val inactive'}}
+function saveSettings(){
+  var cfg={key:document.getElementById('settings-key').value.trim(),provider:document.getElementById('settings-provider').value,url:document.getElementById('settings-url').value.trim()};
+  saveUserApiConfig(cfg);updateSettingsStatus();showToast('设置已保存');document.getElementById('settings-modal').classList.remove('show')}
+setupPhotoUpload(){document.getElementById('f-photo').addEventListener('change',function(e){var file=e.target.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(ev){resumeData.photo=ev.target.result;document.getElementById('photo-img').src=resumeData.photo;document.getElementById('photo-img').style.display='block';document.getElementById('photo-placeholder').style.display='none';renderPreview()};reader.readAsDataURL(file)})}
+function clearPhoto(){resumeData.photo='';document.getElementById('photo-img').style.display='none';document.getElementById('photo-placeholder').style.display='flex';document.getElementById('f-photo').value='';renderPreview()}
+setupPhotoUpload();
+function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show')},2500)}
+var entryConfigs={
+edu:{fields:[{key:'school',label:'学校',ph:'学校名称'},{key:'major',label:'专业',ph:'专业名称'},{key:'degree',label:'学历',ph:'本科/硕士/博士'},{key:'period',label:'时间',ph:'2019.09 - 2023.06'},{key:'gpa',label:'GPA/荣誉',ph:'3.8/4.0 或 荣誉信息'}],label:'教育经历'},
+work:{fields:[{key:'company',label:'公司',ph:'公司名称'},{key:'title',label:'岗位',ph:'岗位名称'},{key:'period',label:'时间',ph:'2023.07 - 2024.02'},{key:'city',label:'城市',ph:'城市'},{key:'content',label:'工作内容',ph:'描述你的工作内容和成果...',textarea:true,polishable:true}],label:'实习经历'},
+proj:{fields:[{key:'name',label:'项目名',ph:'项目名称'},{key:'role',label:'角色',ph:'你的角色'},{key:'period',label:'时间',ph:'2023.01 - 2023.06'},{key:'tech',label:'技术栈',ph:'React, Node.js, MongoDB'},{key:'desc',label:'描述',ph:'项目描述和你的贡献...',textarea:true,polishable:true}],label:'项目经验'}
+};
+function addEntry(s){resumeData[s].push({});renderEntries(s);renderPreview()}
+function removeEntry(s,i){resumeData[s].splice(i,1);renderEntries(s);renderPreview()}
+function escHtml(v){var d=document.createElement('div');d.textContent=v;return d.innerHTML}
+function basicInfoBlock(d){var bi=[],h='';if(d.gender||d.ethnicity||d.hometown){h+='<div class="contact-block"><div class="label">基本信息</div>';if(d.gender)h+='<div class="val">性别：'+escHtml(d.gender)+'</div>';if(d.ethnicity)h+='<div class="val">民族：'+escHtml(d.ethnicity)+'</div>';if(d.hometown)h+='<div class="val">籍贯：'+escHtml(d.hometown)+'</div>';h+='</div>'}return h}
+function updateEntry(el){resumeData[el.dataset.section][parseInt(el.dataset.idx,10)][el.dataset.key]=el.value;renderPreview()}
+function renderEntries(section){
+var cfg=entryConfigs[section],container=document.getElementById(section+'-list'),items=resumeData[section];
+if(!items.length){container.innerHTML='<div style="color:#999;font-size:13px;padding:8px 0;">暂无'+cfg.label+'，点击下方添加</div>';return}
+container.innerHTML=items.map(function(item,idx){
+var h='<div class="entry-item"><button class="entry-del" onclick="removeEntry(\''+section+'\','+idx+')">x</button>';
+cfg.fields.forEach(function(f){
+var val=item[f.key]||'';
+if(f.textarea){
+var pb=f.polishable?'<button class="btn-polish" onclick="openPolishModal(\''+section+'\','+idx+',\''+f.key+'\')">润色 ✨</button>':'';
+h+='<div class="form-group"><label>'+f.label+'</label><div class="polish-wrap"><textarea data-section="'+section+'" data-idx="'+idx+'" data-key="'+f.key+'" rows="3" placeholder="'+f.ph+'" oninput="updateEntry(this)">'+escHtml(val)+'</textarea>'+pb+'</div></div>';
+}else{
+h+='<div class="form-group"><label>'+f.label+'</label><input data-section="'+section+'" data-idx="'+idx+'" data-key="'+f.key+'" value="'+escHtml(val)+'" placeholder="'+f.ph+'" oninput="updateEntry(this)"></div>'
+}
+});
+return h+'</div>'
+}).join('')
+}
+function bindForm(){var m={'f-name':'name','f-gender':'gender','f-ethnicity':'ethnicity','f-hometown':'hometown','f-phone':'phone','f-email':'email','f-intent':'intent','f-summary':'summary','f-skills':'skills','f-certs':'certs','f-evaluate':'evaluate'};Object.keys(m).forEach(function(id){document.getElementById(id).addEventListener('input',function(){resumeData[m[id]]=this.value;renderPreview()})})}
+bindForm();addEntry('edu');addEntry('work');addEntry('proj');
+document.querySelectorAll('.btn-tpl').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('.btn-tpl').forEach(function(x){x.classList.remove('active')});b.classList.add('active');currentTemplate=b.dataset.tpl;renderPreview()})});
+function renderPreview(){var c=document.getElementById('resume-preview'),d=resumeData,h='';switch(currentTemplate){case'simple':h=renderSimple(d);break;case'professional':h=renderProfessional(d);break;case'creative':h=renderCreative(d);break}c.innerHTML=h}
+function renderSimple(d){
+var h='<div class="tpl-simple"><div class="resume-header">'+(d.photo?'<div class="photo-header"><img class="headshot" src="'+d.photo+'">':'')+'<h2>'+(d.name||'(姓名)')+'</h2>'+(d.photo?'</div>':'')+'<div class="contact-line">';
+if(d.phone)h+='<span>📞 '+escHtml(d.phone)+'</span>';if(d.email)h+='<span>✉️ '+escHtml(d.email)+'</span>';
+h+='</div>';var bi=[];if(d.gender)bi.push('性别：'+escHtml(d.gender));if(d.ethnicity)bi.push('民族：'+escHtml(d.ethnicity));if(d.hometown)bi.push('籍贯：'+escHtml(d.hometown));if(bi.length)h+='<div style="font-size:12px;color:#888;margin-top:4px;">'+bi.join(' | ')+'</div>';h+=(d.intent?'<div class="intent">求职意向：'+escHtml(d.intent)+'</div>':'')+'</div>';
+if(d.summary)h+='<div class="section"><div class="section-title">个人简介 <span class="en">Profile</span></div><div class="summary-text">'+escHtml(d.summary)+'</div></div>';
+h+=renderSimpleSection(d.edu,'教育背景','Education',function(e){var s='<div class="item"><div class="item-header"><span class="name">'+escHtml(e.school||'')+' · '+escHtml(e.major||'')+' · '+escHtml(e.degree||'')+'</span><span class="meta">'+escHtml(e.period||'')+'</span></div>';if(e.gpa)s+='<div class="item-body">'+escHtml(e.gpa)+'</div>';return s+'</div>'});
+h+=renderSimpleSection(d.work,'实习经历','Experience',function(w){var s='<div class="item"><div class="item-header"><span class="name">'+escHtml(w.company||'')+' · '+escHtml(w.title||'')+'</span><span class="meta">'+escHtml(w.period||'')+(w.city?' | '+escHtml(w.city):'')+'</span></div>';if(w.content)s+='<div class="item-body">'+escHtml(w.content)+'</div>';return s+'</div>'});
+h+=renderSimpleSection(d.proj,'项目经验','Projects',function(p){var s='<div class="item"><div class="item-header"><span class="name">'+escHtml(p.name||'')+' · '+escHtml(p.role||'')+'</span><span class="meta">'+escHtml(p.period||'')+'</span></div>';if(p.tech)s+='<div class="skill-tags">'+p.tech.split(',').filter(Boolean).map(function(t){return'<span>'+t.trim()+'</span>'}).join('')+'</div>';if(p.desc)s+='<div class="item-body">'+escHtml(p.desc)+'</div>';return s+'</div>'});
+if(d.skills||d.certs){h+='<div class="section"><div class="section-title">技能证书 <span class="en">Skills & Certificates</span></div>';if(d.skills)h+='<div class="skill-tags">'+d.skills.split(',').filter(Boolean).map(function(s){return'<span>'+s.trim()+'</span>'}).join('')+'</div>';if(d.certs)h+='<div style="margin-top:8px;color:#444;">'+d.certs.split(',').filter(Boolean).map(function(s){return s.trim()}).join(' · ')+'</div>';h+='</div>'}
+if(d.evaluate)h+='<div class="section"><div class="section-title">自我评价 <span class="en">Self Evaluation</span></div><div class="evaluate-text">'+escHtml(d.evaluate)+'</div></div>';
+return h+'</div>'}
+function renderSimpleSection(a,t,e,fn){var v=a.filter(function(e){for(var k in e)if(e[k])return true;return false});if(!v.length)return'';var h='<div class="section"><div class="section-title">'+t+' <span class="en">'+e+'</span></div>';v.forEach(function(e){h+=fn(e)});return h+'</div>'}
+function renderProfessional(d){
+var h='<div class="tpl-professional"><div class="sidebar">'+(d.photo?'<img class="headshot" src="'+d.photo+'">':'')+'<h2>'+(d.name||'(姓名)')+'</h2>'+(d.intent?'<div class="intent">'+escHtml(d.intent)+'</div>':'')+'<div class="contact-block"><div class="label">联系方式</div>'+(d.phone?'<div class="val">📞 '+escHtml(d.phone)+'</div>':'')+(d.email?'<div class="val">✉️ '+escHtml(d.email)+'</div>':'')+'</div>';
+if(d.skills||d.certs){h+='<div class="contact-block"><div class="label">技能专长</div><div class="skill-block">';if(d.skills)h+=d.skills.split(',').filter(Boolean).map(function(s){return'<span class="tag">'+s.trim()+'</span>'}).join('');if(d.certs)h+=d.certs.split(',').filter(Boolean).map(function(s){return'<span class="tag">'+s.trim()+'</span>'}).join('');h+='</div></div>'}
+h+=basicInfoBlock(d);h+='</div><div class="main-content">';if(d.summary)h+='<div class="section"><div class="section-title">个人简介</div><div class="summary-text">'+escHtml(d.summary)+'</div></div>';
+h+=renderProSection(d.edu,'教育背景',function(e){var s='<div class="item"><div class="item-header"><span class="name">'+escHtml(e.school||'')+' · '+escHtml(e.major||'')+' · '+escHtml(e.degree||'')+'</span><span class="meta">'+escHtml(e.period||'')+'</span></div>';if(e.gpa)s+='<div class="item-body">'+escHtml(e.gpa)+'</div>';return s+'</div>'});
+h+=renderProSection(d.work,'实习经历',function(w){var s='<div class="item"><div class="item-header"><span class="name">'+escHtml(w.company||'')+' · '+escHtml(w.title||'')+'</span><span class="meta">'+escHtml(w.period||'')+(w.city?' | '+escHtml(w.city):'')+'</span></div>';if(w.content)s+='<div class="item-body">'+escHtml(w.content)+'</div>';return s+'</div>'});
+h+=renderProSection(d.proj,'项目经验',function(p){var s='<div class="item"><div class="item-header"><span class="name">'+escHtml(p.name||'')+' · '+escHtml(p.role||'')+'</span><span class="meta">'+escHtml(p.period||'')+'</span></div>';if(p.tech)s+='<div style="color:#888;font-size:12px;margin:2px 0;">'+escHtml(p.tech)+'</div>';if(p.desc)s+='<div class="item-body">'+escHtml(p.desc)+'</div>';return s+'</div>'});
+if(d.evaluate)h+='<div class="section"><div class="section-title">自我评价</div><div class="evaluate-text">'+escHtml(d.evaluate)+'</div></div>';return h+'</div></div>'}
+function renderProSection(a,t,fn){var v=a.filter(function(e){for(var k in e)if(e[k])return true;return false});if(!v.length)return'';var h='<div class="section"><div class="section-title">'+t+'</div>';v.forEach(function(e){h+=fn(e)});return h+'</div>'}
+function renderCreative(d){
+var h='<div class="tpl-creative"><div class="creative-header">'+(d.photo?'<div class="photo-name"><img class="headshot" src="'+d.photo+'">':'')+'<h2>'+(d.name||'(姓名)')+'</h2>'+(d.photo?'</div>':'')+'<div class="contact-line">'+(d.phone?'<span>📞 '+escHtml(d.phone)+'</span>':'')+(d.email?'<span>✉️ '+escHtml(d.email)+'</span>':'')+'</div>';var bi=[];if(d.gender)bi.push('性别：'+escHtml(d.gender));if(d.ethnicity)bi.push('民族：'+escHtml(d.ethnicity));if(d.hometown)bi.push('籍贯：'+escHtml(d.hometown));if(bi.length)h+='<div style="font-size:12px;opacity:0.8;margin-top:4px;">'+bi.join(' | ')+'</div>'+(d.intent?'<div class="intent">🎯 '+escHtml(d.intent)+'</div>':'')+'</div><div class="creative-body">';
+if(d.summary)h+='<div class="section"><div class="section-title"><span class="icon">👤</span> 个人简介</div><div class="summary-text">'+escHtml(d.summary)+'</div></div>';
+h+=renderCreativeSection(d.edu,'🎓','教育背景',function(e){var s='<div class="item"><div class="item-header"><span class="name"><i>🏫</i>'+escHtml(e.school||'')+' · '+escHtml(e.major||'')+' · '+escHtml(e.degree||'')+'</span><span class="meta">'+escHtml(e.period||'')+'</span></div>';if(e.gpa)s+='<div class="item-body">'+escHtml(e.gpa)+'</div>';return s+'</div>'});
+h+=renderCreativeSection(d.work,'💼','实习经历',function(w){var s='<div class="item"><div class="item-header"><span class="name"><i>🏢</i>'+escHtml(w.company||'')+' · '+escHtml(w.title||'')+'</span><span class="meta">'+escHtml(w.period||'')+(w.city?' 📍 '+escHtml(w.city):'')+'</span></div>';if(w.content)s+='<div class="item-body">'+escHtml(w.content)+'</div>';return s+'</div>'});
+h+=renderCreativeSection(d.proj,'🚀','项目经验',function(p){var s='<div class="item"><div class="item-header"><span class="name"><i>⚡</i>'+escHtml(p.name||'')+' · '+escHtml(p.role||'')+'</span><span class="meta">'+escHtml(p.period||'')+'</span></div>';if(p.tech)s+='<div class="skill-tags" style="margin:4px 0;">'+p.tech.split(',').filter(Boolean).map(function(t){return'<span>'+t.trim()+'</span>'}).join('')+'</div>';if(p.desc)s+='<div class="item-body">'+escHtml(p.desc)+'</div>';return s+'</div>'});
+if(d.skills||d.certs){h+='<div class="section"><div class="section-title"><span class="icon">🛠️</span> 技能证书</div>';if(d.skills)h+='<div class="skill-tags">'+d.skills.split(',').filter(Boolean).map(function(s){return'<span>'+s.trim()+'</span>'}).join('')+'</div>';if(d.certs)h+='<div style="margin-top:10px;color:#888;font-size:13px;">📜 '+d.certs.split(',').filter(Boolean).map(function(s){return s.trim()}).join(' · ')+'</div>';h+='</div>'}
+if(d.evaluate)h+='<div class="section"><div class="section-title"><span class="icon">💡</span> 自我评价</div><div class="evaluate-text">'+escHtml(d.evaluate)+'</div></div>';return h+'</div></div>'}
+function renderCreativeSection(a,i,t,fn){var v=a.filter(function(e){for(var k in e)if(e[k])return true;return false});if(!v.length)return'';var h='<div class="section"><div class="section-title"><span class="icon">'+i+'</span> '+t+'</div>';v.forEach(function(e){h+=fn(e)});return h+'</div>'}
+renderPreview();
+function openPolishModal(section,idx,field){
+var text=section==='_self'?resumeData[field]||'':resumeData[section][idx][field]||'';
+if(!text.trim()){showToast('请先填写内容再润色');return}
+if(getPolishCount()>=20){showToast('今日次数已用完');return}
+polishContext={section:section,idx:idx,field:field,text:text};
+document.getElementById('modal-original').textContent=text;
+document.getElementById('modal-polished').innerHTML='<em>正在生成润色建议...</em>';
+document.getElementById('polish-modal').classList.add('show');
+var ft=section==='work'?'work':section==='proj'?'project':section==='_self'?'evaluate':'default';
+var _uc=loadUserApiConfig();fetch(API_BASE_URL+'/api/polish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:text,field:ft,api_key:_uc.key,provider:_uc.provider||'deepseek',api_url:_uc.url})})
+.then(function(r){return r.json()}).then(function(d){if(d.success){document.getElementById('modal-polished').textContent=d.polished;incPolishCount()}else{document.getElementById('modal-polished').innerHTML='<span style="color:#ef4444;">润色失败，请重试</span>'}})
+.catch(function(){document.getElementById('modal-polished').innerHTML='<span style="color:#ef4444;">请求失败，请检查网络或 ⚙ API 设置</span>'})}
+function closePolishModal(){document.getElementById('polish-modal').classList.remove('show');polishContext=null}
+function applyPolish(){if(!polishContext)return;var p=document.getElementById('modal-polished').textContent,c=polishContext;if(p.indexOf('网络错误')!==-1||p.indexOf('润色失败')!==-1||p.indexOf('正在生成')!==-1){closePolishModal();return}
+if(c.section==='_self'){resumeData[c.field]=p;var el=document.getElementById('f-'+c.field);if(el)el.value=p}else{resumeData[c.section][c.idx][c.field]=p;renderEntries(c.section)};renderPreview();closePolishModal();showToast('润色已应用')}
+document.getElementById('polish-modal').addEventListener('click',function(e){if(e.target===this)closePolishModal()});
+function exportPDF(){var n=resumeData.name||'简历',el=document.getElementById('resume-preview');showToast('正在生成 PDF...');html2pdf().set({margin:[0,0,0,0],filename:n+'_简历.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,letterRendering:true},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['avoid-all','css','legacy']}}).from(el).save().then(function(){showToast('PDF 导出成功')}).catch(function(){showToast('PDF 导出失败，请重试')})}
+</script>
+</body>
+</html>
